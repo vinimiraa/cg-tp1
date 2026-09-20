@@ -7,6 +7,7 @@ public final class Icons {
     public static final String POLYGON = "⬠";
     public static final String SELECT = "▭";
     public static final String CLIP = "✂";
+    public static final String FILL = "▩";
     public static final String CLEAR = "✖";
     public static final String FLIP_HORIZONTAL = "⇄";
     public static final String FLIP_VERTICAL = "⇅";

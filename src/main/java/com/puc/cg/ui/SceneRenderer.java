@@ -4,6 +4,7 @@ import com.puc.cg.algorithms.clipping.ClipWindowAlgorithm;
 import com.puc.cg.algorithms.raster.CircleRasterizerAlgorithm;
 import com.puc.cg.algorithms.raster.LineRasterizerAlgorithm;
 import com.puc.cg.algorithms.raster.impl.CircleRasterizerBresenhamImpl;
+import com.puc.cg.commons.models.FillAction;
 import com.puc.cg.commons.models.Point2D;
 import com.puc.cg.commons.models.Shape;
 import com.puc.cg.commons.models.Window;
@@ -16,10 +17,8 @@ import com.puc.cg.commons.util.Scene;
 import java.util.List;
 
 public class SceneRenderer {
-    private static final int GRID_SPACING = 50;
     private static final int MARKER_ARM_LENGTH = 3;
     private static final int DASH_LENGTH = 4;
-    private static final int ORIGIN_MARKER_RADIUS = 4;
 
     private final CircleRasterizerAlgorithm circleRasterizer = new CircleRasterizerBresenhamImpl();
 
@@ -32,7 +31,6 @@ public class SceneRenderer {
             ClipWindowAlgorithm clipper
     ) {
         framebuffer.clear(Palette.WHITE);
-        drawGrid(framebuffer);
 
         Window clipWindow = scene.getClipWindow();
         for (Shape shape : scene.getShapes()) {
@@ -45,6 +43,12 @@ public class SceneRenderer {
             }
             int color = selection.contains(shape) ? Palette.SELECTION_HIGHLIGHT : Palette.BLACK;
             toDraw.draw(framebuffer, lineRasterizer, circleRasterizer, color);
+        }
+
+        for (FillAction fill : scene.getFills()) {
+            int seedX = (int) Math.round(fill.seed().x());
+            int seedY = (int) Math.round(fill.seed().y());
+            fill.method().fill(framebuffer, seedX, seedY, fill.fillColor(), fill.refColor(), fill.connectivity());
         }
 
         if (clipWindow != null) {
@@ -134,33 +138,4 @@ public class SceneRenderer {
         }
     }
 
-    private void drawGrid(Framebuffer framebuffer) {
-        int halfW = framebuffer.getWidth() / 2;
-        int halfH = framebuffer.getHeight() / 2;
-
-        for (int x = -halfW; x <= halfW; x += GRID_SPACING) {
-            int color = x == 0 ? Palette.GRID_AXIS : Palette.GRID_LINE;
-            for (int y = -halfH; y <= halfH; y++) {
-                framebuffer.setPixel(x, y, color);
-            }
-        }
-        for (int y = -halfH; y <= halfH; y += GRID_SPACING) {
-            int color = y == 0 ? Palette.GRID_AXIS : Palette.GRID_LINE;
-            for (int x = -halfW; x <= halfW; x++) {
-                framebuffer.setPixel(x, y, color);
-            }
-        }
-
-        drawOriginMarker(framebuffer);
-    }
-
-    private void drawOriginMarker(Framebuffer framebuffer) {
-        for (int dx = -ORIGIN_MARKER_RADIUS; dx <= ORIGIN_MARKER_RADIUS; dx++) {
-            for (int dy = -ORIGIN_MARKER_RADIUS; dy <= ORIGIN_MARKER_RADIUS; dy++) {
-                if (dx * dx + dy * dy <= ORIGIN_MARKER_RADIUS * ORIGIN_MARKER_RADIUS) {
-                    framebuffer.setPixel(dx, dy, Palette.ORIGIN_HIGHLIGHT);
-                }
-            }
-        }
-    }
 }

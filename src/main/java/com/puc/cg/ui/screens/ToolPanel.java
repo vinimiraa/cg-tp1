@@ -1,12 +1,15 @@
 package com.puc.cg.ui.screens;
 
 import com.puc.cg.algorithms.clipping.ClipAlgorithm;
+import com.puc.cg.algorithms.filling.Connectivity;
+import com.puc.cg.algorithms.filling.FillMethod;
 import com.puc.cg.algorithms.raster.LineAlgorithm;
 import com.puc.cg.algorithms.transform.Matrix3;
 import com.puc.cg.algorithms.transform.Transformations;
 import com.puc.cg.commons.models.Point2D;
 import com.puc.cg.commons.util.Dimensions;
 import com.puc.cg.commons.util.Icons;
+import com.puc.cg.commons.util.Palette;
 import com.puc.cg.ui.Tool;
 
 import javax.swing.AbstractButton;
@@ -43,7 +46,8 @@ public class ToolPanel extends JPanel {
                 buildAlgorithmsGroup(drawingPanel),
                 buildToolsGroup(drawingPanel),
                 buildTransformGroup(drawingPanel),
-                buildImageGroup(drawingPanel)
+                buildImageGroup(drawingPanel),
+                buildFillGroup(drawingPanel)
         };
         equalizeHeights(groups);
         for (JPanel group : groups) {
@@ -80,6 +84,11 @@ public class ToolPanel extends JPanel {
                 new RadioOption("Bresenham", true, null)
         ));
 
+        group.add(radioColumn("Preenchimento",
+                new RadioOption("Flood Fill", true, e -> drawingPanel.setFillMethod(FillMethod.FLOOD_FILL)),
+                new RadioOption("Boundary Fill", false, e -> drawingPanel.setFillMethod(FillMethod.BOUNDARY_FILL))
+        ));
+
         return group;
     }
 
@@ -94,6 +103,7 @@ public class ToolPanel extends JPanel {
         addToolToggle(group, toolGroup, Icons.POLYGON + " Polígono", Tool.ADD_POLYGON, drawingPanel, false);
         addToolToggle(group, toolGroup, Icons.SELECT + " Selecionar", Tool.SELECT_RECT, drawingPanel, false);
         addToolToggle(group, toolGroup, Icons.CLIP + " Recorte", Tool.DEFINE_CLIP_WINDOW, drawingPanel, false);
+        addToolToggle(group, toolGroup, Icons.FILL + " Preencher", Tool.FILL, drawingPanel, false);
 
         JButton clearButton = new JButton(Icons.CLEAR + " Limpar tudo");
         clearButton.addActionListener(e -> drawingPanel.clearScene());
@@ -150,6 +160,25 @@ public class ToolPanel extends JPanel {
         flipBothButton.addActionListener(e -> applyPivoted(drawingPanel, Transformations.reflectionXY()));
         fixedSize(flipBothButton, Dimensions.BUTTON_WIDTH);
         group.add(flipBothButton);
+
+        return group;
+    }
+
+    private JPanel buildFillGroup(DrawingPanel drawingPanel) {
+        JPanel group = new JPanel(new FlowLayout(FlowLayout.LEFT, Dimensions.GAP, Dimensions.GAP));
+        group.setBorder(groupBorder("preenchimento"));
+
+        group.add(radioColumn("Cor",
+                new RadioOption("Preto", false, e -> drawingPanel.setFillColor(Palette.BLACK)),
+                new RadioOption("Vermelho", true, e -> drawingPanel.setFillColor(Palette.RED)),
+                new RadioOption("Verde", false, e -> drawingPanel.setFillColor(Palette.GREEN)),
+                new RadioOption("Azul", false, e -> drawingPanel.setFillColor(Palette.BLUE))
+        ));
+
+        group.add(radioColumn("Conectividade",
+                new RadioOption("4-conectado", true, e -> drawingPanel.setConnectivity(Connectivity.FOUR)),
+                new RadioOption("8-conectado", false, e -> drawingPanel.setConnectivity(Connectivity.EIGHT))
+        ));
 
         return group;
     }

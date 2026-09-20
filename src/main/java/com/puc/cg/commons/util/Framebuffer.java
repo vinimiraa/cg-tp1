@@ -22,6 +22,18 @@ public class Framebuffer {
         image.setRGB(px, py, rgb);
     }
 
+    public int getPixel(int x, int y) {
+        int px = x + image.getWidth() / 2;
+        int py = y + image.getHeight() / 2;
+        return image.getRGB(px, py) & 0xFFFFFF;
+    }
+
+    public boolean isInBounds(int x, int y) {
+        int px = x + image.getWidth() / 2;
+        int py = y + image.getHeight() / 2;
+        return px < 0 || py < 0 || px >= image.getWidth() || py >= image.getHeight();
+    }
+
     public void clear(int rgb) {
         for (int y = 0; y < image.getHeight(); y++) {
             for (int x = 0; x < image.getWidth(); x++) {

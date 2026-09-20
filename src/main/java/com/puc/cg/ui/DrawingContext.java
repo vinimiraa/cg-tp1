@@ -22,4 +22,6 @@ public interface DrawingContext {
     void clearPreview();
 
     void setSelection(List<Shape> shapes);
+
+    void applyFill(Point2D seed);
 }

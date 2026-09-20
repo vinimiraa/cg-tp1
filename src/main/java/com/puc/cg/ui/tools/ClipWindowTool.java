@@ -5,11 +5,6 @@ import com.puc.cg.commons.models.Window;
 import com.puc.cg.ui.DrawingContext;
 import com.puc.cg.ui.DrawingTool;
 
-/**
- * Ferramenta "Definir janela de recorte": o 1º clique marca um canto e já
- * liga a pré-visualização (retângulo acompanha o mouse); o 2º clique marca
- * o canto oposto. Botão direito cancela.
- */
 public class ClipWindowTool implements DrawingTool {
 
     private Point2D pendingCorner;

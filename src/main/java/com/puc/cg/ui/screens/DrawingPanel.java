@@ -1,11 +1,15 @@
 package com.puc.cg.ui.screens;
 
 import com.puc.cg.algorithms.clipping.ClipAlgorithm;
+import com.puc.cg.algorithms.filling.Connectivity;
+import com.puc.cg.algorithms.filling.FillMethod;
 import com.puc.cg.algorithms.raster.LineAlgorithm;
 import com.puc.cg.algorithms.transform.Matrix3;
+import com.puc.cg.commons.models.FillAction;
 import com.puc.cg.commons.models.Point2D;
 import com.puc.cg.commons.models.Shape;
 import com.puc.cg.commons.util.Framebuffer;
+import com.puc.cg.commons.util.Palette;
 import com.puc.cg.commons.util.Scene;
 import com.puc.cg.ui.DrawingContext;
 import com.puc.cg.ui.DrawingTool;
@@ -16,6 +20,7 @@ import com.puc.cg.ui.Tool;
 import com.puc.cg.ui.Viewport;
 import com.puc.cg.ui.tools.CircleTool;
 import com.puc.cg.ui.tools.ClipWindowTool;
+import com.puc.cg.ui.tools.FillTool;
 import com.puc.cg.ui.tools.LineTool;
 import com.puc.cg.ui.tools.PolygonTool;
 import com.puc.cg.ui.tools.SelectionTool;
@@ -24,6 +29,7 @@ import lombok.Setter;
 
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Graphics;
@@ -44,6 +50,8 @@ public class DrawingPanel extends JPanel implements DrawingContext {
     private static final int INITIAL_HEIGHT = 800;
     private static final int MIN_WIDTH = 300;
     private static final int MIN_HEIGHT = 200;
+    private static final int GRID_SPACING = 50;
+    private static final int ORIGIN_MARKER_RADIUS = 4;
 
     @Getter
     private final Scene scene = new Scene();
@@ -59,6 +67,12 @@ public class DrawingPanel extends JPanel implements DrawingContext {
     private LineAlgorithm lineAlgorithm = LineAlgorithm.DDA;
     @Setter
     private ClipAlgorithm clipAlgorithm = ClipAlgorithm.COHEN_SUTHERLAND;
+    @Setter
+    private FillMethod fillMethod = FillMethod.FLOOD_FILL;
+    @Setter
+    private int fillColor = Palette.RED;
+    @Setter
+    private Connectivity connectivity = Connectivity.FOUR;
 
     private Point dragAnchorScreen;
     private JLabel statusLabel;
@@ -73,6 +87,7 @@ public class DrawingPanel extends JPanel implements DrawingContext {
         tools.put(Tool.DEFINE_CLIP_WINDOW, new ClipWindowTool());
         tools.put(Tool.ADD_POLYGON, new PolygonTool());
         tools.put(Tool.SELECT_RECT, new SelectionTool());
+        tools.put(Tool.FILL, new FillTool());
 
         addComponentListener(new ComponentAdapter() {
             @Override
@@ -251,6 +266,15 @@ public class DrawingPanel extends JPanel implements DrawingContext {
     }
 
     @Override
+    public void applyFill(Point2D seed) {
+        int seedX = (int) Math.round(seed.x());
+        int seedY = (int) Math.round(seed.y());
+        int refColor = fillMethod == FillMethod.BOUNDARY_FILL ? Palette.BLACK : framebuffer.getPixel(seedX, seedY);
+        scene.getFills().add(new FillAction(seed, fillMethod, fillColor, refColor, connectivity));
+        requestRedraw();
+    }
+
+    @Override
     public void requestRedraw() {
         renderer.render(framebuffer, scene, selection, preview, lineAlgorithm, clipAlgorithm);
         repaint();
@@ -263,5 +287,33 @@ public class DrawingPanel extends JPanel implements DrawingContext {
         g2.translate(viewport.getPanX(), viewport.getPanY());
         g2.scale(viewport.getZoom(), viewport.getZoom());
         g2.drawImage(framebuffer.getImage(), 0, 0, null);
+        drawGridOverlay(g2);
+    }
+
+    private void drawGridOverlay(Graphics2D g2) {
+        int width = framebuffer.getWidth();
+        int height = framebuffer.getHeight();
+        int centerX = width / 2;
+        int centerY = height / 2;
+
+        g2.setColor(new Color(Palette.GRID_LINE));
+        for (int x = -centerX; x <= centerX; x += GRID_SPACING) {
+            if (x != 0) {
+                g2.drawLine(x + centerX, 0, x + centerX, height);
+            }
+        }
+        for (int y = -centerY; y <= centerY; y += GRID_SPACING) {
+            if (y != 0) {
+                g2.drawLine(0, y + centerY, width, y + centerY);
+            }
+        }
+
+        g2.setColor(new Color(Palette.GRID_AXIS));
+        g2.drawLine(centerX, 0, centerX, height);
+        g2.drawLine(0, centerY, width, centerY);
+
+        g2.setColor(new Color(Palette.ORIGIN_HIGHLIGHT));
+        g2.fillOval(centerX - ORIGIN_MARKER_RADIUS, centerY - ORIGIN_MARKER_RADIUS,
+                ORIGIN_MARKER_RADIUS * 2, ORIGIN_MARKER_RADIUS * 2);
     }
 }

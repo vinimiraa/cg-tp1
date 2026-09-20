@@ -5,11 +5,6 @@ import com.puc.cg.commons.models.impl.LineSegment;
 import com.puc.cg.ui.DrawingContext;
 import com.puc.cg.ui.DrawingTool;
 
-/**
- * Ferramenta "Reta": o 1º clique guarda o ponto inicial e já liga a
- * pré-visualização (que acompanha o mouse até o 2º clique); o 2º clique
- * fecha o segmento e adiciona na Scene; o botão direito cancela.
- */
 public class LineTool implements DrawingTool {
 
     private Point2D pendingStart;

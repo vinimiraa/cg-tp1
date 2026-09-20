@@ -6,5 +6,6 @@ public enum Tool {
     ADD_CIRCLE,
     ADD_POLYGON,
     SELECT_RECT,
-    DEFINE_CLIP_WINDOW
+    DEFINE_CLIP_WINDOW,
+    FILL
 }
