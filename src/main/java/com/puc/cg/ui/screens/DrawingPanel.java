@@ -1,91 +1,89 @@
 package com.puc.cg.ui.screens;
 
-import com.puc.cg.algorithms.clipping.ClipWindowAlgorithm;
-import com.puc.cg.algorithms.clipping.impl.CohenSutherland;
-import com.puc.cg.algorithms.clipping.impl.LiangBarsky;
-import com.puc.cg.algorithms.raster.CircleRasterizerAlgorithm;
 import com.puc.cg.algorithms.raster.Framebuffer;
-import com.puc.cg.algorithms.raster.LineRasterizerAlgorithm;
-import com.puc.cg.algorithms.raster.impl.CircleRasterizerBresenhamImpl;
-import com.puc.cg.algorithms.raster.impl.LineRasterizerBresenhamImpl;
-import com.puc.cg.algorithms.raster.impl.LineRasterizerDDAImpl;
+import com.puc.cg.algorithms.transform.Matrix3;
 import com.puc.cg.commons.enums.ClipAlgorithm;
 import com.puc.cg.commons.enums.LineAlgorithm;
 import com.puc.cg.commons.model.Circle;
 import com.puc.cg.commons.model.LineSegment;
 import com.puc.cg.commons.model.Point2D;
+import com.puc.cg.commons.model.Polygon2D;
 import com.puc.cg.commons.model.Scene;
-import com.puc.cg.commons.model.Window;
-import com.puc.cg.commons.util.Palette;
 import com.puc.cg.ui.DrawingContext;
 import com.puc.cg.ui.DrawingTool;
+import com.puc.cg.ui.PreviewState;
+import com.puc.cg.ui.SceneRenderer;
+import com.puc.cg.ui.Selection;
 import com.puc.cg.ui.Tool;
+import com.puc.cg.ui.Viewport;
 import com.puc.cg.ui.tools.CircleTool;
 import com.puc.cg.ui.tools.ClipWindowTool;
 import com.puc.cg.ui.tools.LineTool;
+import com.puc.cg.ui.tools.PolygonTool;
+import com.puc.cg.ui.tools.SelectionTool;
 import lombok.Getter;
+import lombok.Setter;
 
+import javax.swing.JLabel;
 import javax.swing.JPanel;
+import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
 import java.awt.event.MouseWheelEvent;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 
-/**
- * Área de desenho: mantém o framebuffer, o modelo (Scene) e a visualização
- * (pan/zoom), e implementa DrawingContext para que as DrawingTool não
- * dependam do Swing. Cada clique de mouse é despachado (já convertido de
- * coordenada de tela para coordenada do modelo) para a ferramenta atual;
- * PAN_ZOOM é tratado aqui mesmo, porque mexe na visualização, não na Scene.
- */
-@Getter
 public class DrawingPanel extends JPanel implements DrawingContext {
-    private static final int WIDTH = 1024;
-    private static final int HEIGHT = 728;
-    private static final double MIN_ZOOM = 0.2;
-    private static final double MAX_ZOOM = 8.0;
-    private static final double ZOOM_STEP = 1.1;
+    private static final int INITIAL_WIDTH = 1400;
+    private static final int INITIAL_HEIGHT = 800;
+    private static final int MIN_WIDTH = 300;
+    private static final int MIN_HEIGHT = 200;
 
+    @Getter
     private final Scene scene = new Scene();
-    private final Framebuffer framebuffer = new Framebuffer(WIDTH, HEIGHT);
+    private final Selection selection = new Selection();
+    private final PreviewState preview = new PreviewState();
+    private final Viewport viewport = new Viewport();
+    private final SceneRenderer renderer = new SceneRenderer();
 
-    private final LineRasterizerAlgorithm ddaRasterizer = new LineRasterizerDDAImpl();
-    private final LineRasterizerAlgorithm bresenhamRasterizer = new LineRasterizerBresenhamImpl();
-    private final CircleRasterizerAlgorithm circleRasterizer = new CircleRasterizerBresenhamImpl();
-
-    private final ClipWindowAlgorithm cohenSutherlandClipper = new CohenSutherland();
-    private final ClipWindowAlgorithm liangBarskyClipper = new LiangBarsky();
+    private Framebuffer framebuffer = new Framebuffer(INITIAL_WIDTH, INITIAL_HEIGHT);
 
     private final Map<Tool, DrawingTool> tools = new EnumMap<>(Tool.class);
-
     private Tool currentTool = Tool.PAN_ZOOM;
+
+    @Setter
     private LineAlgorithm lineAlgorithm = LineAlgorithm.DDA;
+    @Setter
     private ClipAlgorithm clipAlgorithm = ClipAlgorithm.COHEN_SUTHERLAND;
 
-    private LineSegment previewLine;
-    private Circle previewCircle;
-    private Window previewRect;
-
-    private double zoom = 1.0;
-    private double panX = 0;
-    private double panY = 0;
     private Point dragAnchorScreen;
+    private JLabel statusLabel;
 
     public DrawingPanel() {
-        setPreferredSize(new Dimension(WIDTH, HEIGHT));
+        setPreferredSize(new Dimension(INITIAL_WIDTH, INITIAL_HEIGHT));
+        setMinimumSize(new Dimension(MIN_WIDTH, MIN_HEIGHT));
+        updateCursor();
 
         tools.put(Tool.ADD_LINE, new LineTool());
         tools.put(Tool.ADD_CIRCLE, new CircleTool());
         tools.put(Tool.DEFINE_CLIP_WINDOW, new ClipWindowTool());
-        // Polígono e seleção por região retangular ainda são exigidos pelo
-        // enunciado (Seção 2 do PDF) — voltam quando essas fases forem
-        // implementadas; por ora só ficam de fora do toolbar.
+        tools.put(Tool.ADD_POLYGON, new PolygonTool());
+        tools.put(Tool.SELECT_RECT, new SelectionTool());
+
+        addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                resizeFramebuffer();
+            }
+        });
 
         addMouseListener(new MouseAdapter() {
             @Override
@@ -107,9 +105,11 @@ public class DrawingPanel extends JPanel implements DrawingContext {
 
             @Override
             public void mouseMoved(MouseEvent e) {
+                Point2D modelPoint = toModelPoint(e);
+                updateStatus(modelPoint.getX(), modelPoint.getY());
                 DrawingTool tool = tools.get(currentTool);
                 if (tool != null) {
-                    tool.onMouseMoved(toModelPoint(e), DrawingPanel.this);
+                    tool.onMouseMoved(modelPoint, DrawingPanel.this);
                 }
             }
         });
@@ -117,9 +117,17 @@ public class DrawingPanel extends JPanel implements DrawingContext {
         addMouseWheelListener(this::handleMouseWheel);
     }
 
+    private void resizeFramebuffer() {
+        int w = Math.max(1, getWidth());
+        int h = Math.max(1, getHeight());
+        if (framebuffer.getWidth() == w && framebuffer.getHeight() == h) {
+            return;
+        }
+        framebuffer = new Framebuffer(w, h);
+        requestRedraw();
+    }
+
     private void handleMousePressed(MouseEvent e) {
-        // Botão do meio: arrasta a visualização em qualquer ferramenta, sem
-        // mexer no clique pendente de uma reta/círculo/janela em andamento.
         if (e.getButton() == MouseEvent.BUTTON2) {
             dragAnchorScreen = e.getPoint();
             return;
@@ -146,29 +154,23 @@ public class DrawingPanel extends JPanel implements DrawingContext {
 
     private void handleMouseDragged(MouseEvent e) {
         if (dragAnchorScreen != null) {
-            panX += e.getX() - dragAnchorScreen.x;
-            panY += e.getY() - dragAnchorScreen.y;
+            viewport.panBy(e.getX() - dragAnchorScreen.x, e.getY() - dragAnchorScreen.y);
             dragAnchorScreen = e.getPoint();
             repaint();
         }
+        Point2D modelPoint = toModelPoint(e);
+        updateStatus(modelPoint.getX(), modelPoint.getY());
     }
 
     private void handleMouseWheel(MouseWheelEvent e) {
-        double factor = Math.pow(ZOOM_STEP, -e.getPreciseWheelRotation());
-        double newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom * factor));
-
-        double modelX = (e.getX() - panX) / zoom;
-        double modelY = (e.getY() - panY) / zoom;
-
-        zoom = newZoom;
-        panX = e.getX() - modelX * zoom;
-        panY = e.getY() - modelY * zoom;
-
+        viewport.zoomAt(e.getX(), e.getY(), e.getPreciseWheelRotation(), framebuffer.getWidth(), framebuffer.getHeight());
+        Point2D modelPoint = toModelPoint(e);
+        updateStatus(modelPoint.getX(), modelPoint.getY());
         repaint();
     }
 
     private Point2D toModelPoint(MouseEvent e) {
-        return new Point2D((e.getX() - panX) / zoom, (e.getY() - panY) / zoom);
+        return viewport.toModelPoint(e.getX(), e.getY(), framebuffer.getWidth(), framebuffer.getHeight());
     }
 
     public void setCurrentTool(Tool tool) {
@@ -178,18 +180,28 @@ public class DrawingPanel extends JPanel implements DrawingContext {
         }
         dragAnchorScreen = null;
         this.currentTool = tool;
+        updateCursor();
     }
 
-    public void setLineAlgorithm(LineAlgorithm algorithm) {
-        this.lineAlgorithm = algorithm;
+    private void updateCursor() {
+        int cursorType = currentTool == Tool.PAN_ZOOM ? Cursor.HAND_CURSOR : Cursor.CROSSHAIR_CURSOR;
+        setCursor(Cursor.getPredefinedCursor(cursorType));
     }
 
-    public void setClipAlgorithm(ClipAlgorithm algorithm) {
-        this.clipAlgorithm = algorithm;
+    public void setStatusLabel(JLabel statusLabel) {
+        this.statusLabel = statusLabel;
+        updateStatus(0, 0);
+    }
+
+    private void updateStatus(double modelX, double modelY) {
+        if (statusLabel != null) {
+            statusLabel.setText(String.format("  (%.0f, %.0f)    Zoom: %.0f%%", modelX, modelY, viewport.getZoom() * 100));
+        }
     }
 
     public void clearScene() {
         scene.clear();
+        selection.clear();
         DrawingTool tool = tools.get(currentTool);
         if (tool != null) {
             tool.reset();
@@ -197,113 +209,63 @@ public class DrawingPanel extends JPanel implements DrawingContext {
         clearPreview();
     }
 
-    private LineRasterizerAlgorithm currentLineRasterizer() {
-        return lineAlgorithm == LineAlgorithm.DDA ? ddaRasterizer : bresenhamRasterizer;
+    public Point2D getSelectionCenter() {
+        return selection.center();
     }
 
-    private ClipWindowAlgorithm currentClipAlgorithm() {
-        return clipAlgorithm == ClipAlgorithm.COHEN_SUTHERLAND ? cohenSutherlandClipper : liangBarskyClipper;
+    public void applyTransform(Matrix3 matrix) {
+        selection.applyTransform(matrix, scene);
+        requestRedraw();
     }
 
     @Override
     public void setPreviewLine(Point2D start, Point2D end) {
-        previewLine = new LineSegment(start, end);
-        previewCircle = null;
-        previewRect = null;
+        preview.setLine(start, end);
         requestRedraw();
     }
 
     @Override
     public void setPreviewCircle(Point2D center, int radius) {
-        previewCircle = new Circle(center, radius);
-        previewLine = null;
-        previewRect = null;
+        preview.setCircle(center, radius);
         requestRedraw();
     }
 
     @Override
     public void setPreviewRect(Point2D corner1, Point2D corner2) {
-        double xMin = Math.min(corner1.getX(), corner2.getX());
-        double xMax = Math.max(corner1.getX(), corner2.getX());
-        double yMin = Math.min(corner1.getY(), corner2.getY());
-        double yMax = Math.max(corner1.getY(), corner2.getY());
+        preview.setRect(corner1, corner2);
+        requestRedraw();
+    }
 
-        previewRect = new Window(xMin, yMin, xMax, yMax);
-        previewLine = null;
-        previewCircle = null;
+    @Override
+    public void setPreviewPolygon(List<Point2D> vertices, Point2D current) {
+        preview.setPolygon(vertices, current);
         requestRedraw();
     }
 
     @Override
     public void clearPreview() {
-        previewLine = null;
-        previewCircle = null;
-        previewRect = null;
+        preview.clear();
+        requestRedraw();
+    }
+
+    @Override
+    public void setSelection(List<LineSegment> lines, List<Circle> circles, List<Polygon2D> polygons) {
+        selection.set(lines, circles, polygons);
         requestRedraw();
     }
 
     @Override
     public void requestRedraw() {
-        framebuffer.clear(Palette.WHITE);
-
-        Window clipWindow = scene.getClipWindow();
-        for (LineSegment line : scene.getLines()) {
-            LineSegment toDraw = clipWindow == null ? line : currentClipAlgorithm().clip(line, clipWindow);
-            if (toDraw != null) {
-                currentLineRasterizer().draw(framebuffer, toDraw.start(), toDraw.end(), Palette.BLACK);
-            }
-        }
-
-        for (Circle circle : scene.getCircles()) {
-            circleRasterizer.draw(framebuffer, circle.center(), circle.radius(), Palette.BLACK);
-        }
-
-        if (clipWindow != null) {
-            drawWindowOutline(clipWindow, Palette.BLUE);
-        }
-
-        drawActivePreview();
-
+        renderer.render(framebuffer, scene, selection, preview, lineAlgorithm, clipAlgorithm);
         repaint();
-    }
-
-    private void drawActivePreview() {
-        if (previewLine != null) {
-            currentLineRasterizer().draw(framebuffer, previewLine.start(), previewLine.end(), Palette.RED);
-            drawPendingMarker(previewLine.start(), Palette.RED);
-        }
-        if (previewCircle != null) {
-            circleRasterizer.draw(framebuffer, previewCircle.center(), previewCircle.radius(), Palette.RED);
-            drawPendingMarker(previewCircle.center(), Palette.RED);
-        }
-        if (previewRect != null) {
-            drawWindowOutline(previewRect, Palette.RED);
-            drawPendingMarker(new Point2D(previewRect.getXMin(), previewRect.getYMin()), Palette.RED);
-        }
-    }
-
-    private void drawWindowOutline(Window window, int rgb) {
-        int xMin = (int) Math.round(window.getXMin());
-        int xMax = (int) Math.round(window.getXMax());
-        int yMin = (int) Math.round(window.getYMin());
-        int yMax = (int) Math.round(window.getYMax());
-
-        for (int x = xMin; x <= xMax; x++) {
-            framebuffer.setPixel(x, yMin, rgb);
-            framebuffer.setPixel(x, yMax, rgb);
-        }
-        for (int y = yMin; y <= yMax; y++) {
-            framebuffer.setPixel(xMin, y, rgb);
-            framebuffer.setPixel(xMax, y, rgb);
-        }
     }
 
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g;
-        g2.translate(panX, panY);
-        g2.scale(zoom, zoom);
+        g2.translate(viewport.getPanX(), viewport.getPanY());
+        g2.scale(viewport.getZoom(), viewport.getZoom());
         g2.drawImage(framebuffer.getImage(), 0, 0, null);
     }
 }

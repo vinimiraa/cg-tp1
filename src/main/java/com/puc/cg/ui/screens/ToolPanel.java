@@ -1,108 +1,222 @@
 package com.puc.cg.ui.screens;
 
+import com.puc.cg.algorithms.transform.Matrix3;
+import com.puc.cg.algorithms.transform.Transformations;
 import com.puc.cg.commons.enums.ClipAlgorithm;
 import com.puc.cg.commons.enums.LineAlgorithm;
+import com.puc.cg.commons.model.Point2D;
+import com.puc.cg.commons.util.Dimensions;
+import com.puc.cg.commons.util.Icons;
 import com.puc.cg.ui.Tool;
 
+import javax.swing.AbstractButton;
+import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
-import javax.swing.JSeparator;
 import javax.swing.JSlider;
+import javax.swing.JToggleButton;
+import javax.swing.border.TitledBorder;
+import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.GridLayout;
+import java.awt.event.ActionListener;
+import java.util.function.IntFunction;
 
 public class ToolPanel extends JPanel {
+    private static final int TRANSLATION_RANGE = 200;
+    private static final int ROTATION_RANGE = 180;
+    private static final int SCALE_MIN = 1;
+    private static final int SCALE_MAX = 50;
+    private static final int SCALE_DEFAULT = 10;
+    private static final double SCALE_DIVISOR = 10.0;
+
     public ToolPanel(DrawingPanel drawingPanel) {
-        setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+        setLayout(new FlowLayout(FlowLayout.LEFT, Dimensions.GAP, Dimensions.GAP));
 
-        add(buildAlgorithmsSection(drawingPanel));
-        add(new JSeparator());
-        add(buildToolsSection(drawingPanel));
-        add(new JSeparator());
-        add(buildTransformSection());
+        JPanel[] groups = {
+                buildAlgorithmsGroup(drawingPanel),
+                buildToolsGroup(drawingPanel),
+                buildTransformGroup(drawingPanel),
+                buildImageGroup(drawingPanel)
+        };
+        equalizeHeights(groups);
+        for (JPanel group : groups) {
+            add(group);
+        }
     }
 
-    private JPanel buildAlgorithmsSection(DrawingPanel drawingPanel) {
-        JPanel section = new JPanel(new FlowLayout(FlowLayout.LEFT));
-
-        section.add(new JLabel("Algoritmo de reta:"));
-        JRadioButton dda = new JRadioButton("DDA", true);
-        JRadioButton bresenhamLine = new JRadioButton("Bresenham");
-
-        dda.addActionListener(e -> drawingPanel.setLineAlgorithm(LineAlgorithm.DDA));
-        bresenhamLine.addActionListener(e -> drawingPanel.setLineAlgorithm(LineAlgorithm.BRESENHAM));
-
-        ButtonGroup lineAlgorithmGroup = new ButtonGroup();
-        lineAlgorithmGroup.add(dda);
-        lineAlgorithmGroup.add(bresenhamLine);
-
-        section.add(dda);
-        section.add(bresenhamLine);
-
-        section.add(new JLabel("\tAlgoritmo de recorte:"));
-
-        JRadioButton cohenSutherland = new JRadioButton("Cohen-Sutherland", true);
-        JRadioButton liangBarsky = new JRadioButton("Liang-Barsky");
-
-        cohenSutherland.addActionListener(e -> drawingPanel.setClipAlgorithm(ClipAlgorithm.COHEN_SUTHERLAND));
-        liangBarsky.addActionListener(e -> drawingPanel.setClipAlgorithm(ClipAlgorithm.LIANG_BARSKY));
-
-        ButtonGroup clipAlgorithmGroup = new ButtonGroup();
-        clipAlgorithmGroup.add(cohenSutherland);
-        clipAlgorithmGroup.add(liangBarsky);
-
-
-        section.add(cohenSutherland);
-        section.add(liangBarsky);
-
-        return section;
+    private void equalizeHeights(JPanel[] groups) {
+        int maxHeight = 0;
+        for (JPanel group : groups) {
+            maxHeight = Math.max(maxHeight, group.getPreferredSize().height);
+        }
+        for (JPanel group : groups) {
+            Dimension size = group.getPreferredSize();
+            group.setPreferredSize(new Dimension(size.width, maxHeight));
+        }
     }
 
-    private JPanel buildToolsSection(DrawingPanel drawingPanel) {
-        JPanel section = new JPanel(new FlowLayout(FlowLayout.LEFT));
+    private JPanel buildAlgorithmsGroup(DrawingPanel drawingPanel) {
+        JPanel group = new JPanel(new FlowLayout(FlowLayout.LEFT, Dimensions.GAP, Dimensions.GAP));
+        group.setBorder(groupBorder("algoritmos"));
 
-        JButton panZoomButton = new JButton("Mover/Zoom");
-        panZoomButton.addActionListener(e -> drawingPanel.setCurrentTool(Tool.PAN_ZOOM));
-        section.add(panZoomButton);
+        group.add(radioColumn("Rasterização",
+                new RadioOption("DDA", true, e -> drawingPanel.setLineAlgorithm(LineAlgorithm.DDA)),
+                new RadioOption("Bresenham", false, e -> drawingPanel.setLineAlgorithm(LineAlgorithm.BRESENHAM))
+        ));
 
-        JButton lineButton = new JButton("Reta");
-        lineButton.addActionListener(e -> drawingPanel.setCurrentTool(Tool.ADD_LINE));
-        section.add(lineButton);
+        group.add(radioColumn("Recorte",
+                new RadioOption("Cohen-Sutherland", true, e -> drawingPanel.setClipAlgorithm(ClipAlgorithm.COHEN_SUTHERLAND)),
+                new RadioOption("Liang-Barsky", false, e -> drawingPanel.setClipAlgorithm(ClipAlgorithm.LIANG_BARSKY))
+        ));
 
-        JButton circleButton = new JButton("Círculo");
-        circleButton.addActionListener(e -> drawingPanel.setCurrentTool(Tool.ADD_CIRCLE));
-        section.add(circleButton);
+        group.add(radioColumn("Circunferência",
+                new RadioOption("Bresenham", true, null)
+        ));
 
-        JButton clipWindowButton = new JButton("Definir janela de recorte");
-        clipWindowButton.addActionListener(e -> drawingPanel.setCurrentTool(Tool.DEFINE_CLIP_WINDOW));
-        section.add(clipWindowButton);
+        return group;
+    }
 
-        JButton clearButton = new JButton("Limpar tudo");
+    private JPanel buildToolsGroup(DrawingPanel drawingPanel) {
+        JPanel group = new JPanel(new GridLayout(0, 2, Dimensions.GAP, Dimensions.GAP));
+        group.setBorder(groupBorder("ferramentas"));
+        ButtonGroup toolGroup = new ButtonGroup();
+
+        addToolToggle(group, toolGroup, Icons.MOVE_ZOOM + " Mover/Zoom", Tool.PAN_ZOOM, drawingPanel, true);
+        addToolToggle(group, toolGroup, Icons.LINE + " Reta", Tool.ADD_LINE, drawingPanel, false);
+        addToolToggle(group, toolGroup, Icons.CIRCLE + " Círculo", Tool.ADD_CIRCLE, drawingPanel, false);
+        addToolToggle(group, toolGroup, Icons.POLYGON + " Polígono", Tool.ADD_POLYGON, drawingPanel, false);
+        addToolToggle(group, toolGroup, Icons.SELECT + " Selecionar", Tool.SELECT_RECT, drawingPanel, false);
+        addToolToggle(group, toolGroup, Icons.CLIP + " Recorte", Tool.DEFINE_CLIP_WINDOW, drawingPanel, false);
+
+        JButton clearButton = new JButton(Icons.CLEAR + " Limpar tudo");
         clearButton.addActionListener(e -> drawingPanel.clearScene());
-        section.add(clearButton);
+        fixedSize(clearButton, Dimensions.BUTTON_WIDTH);
+        group.add(clearButton);
 
-        return section;
+        return group;
     }
 
-    private JPanel buildTransformSection() {
-        JPanel section = new JPanel(new FlowLayout(FlowLayout.LEFT));
+    private JPanel buildTransformGroup(DrawingPanel drawingPanel) {
+        JPanel group = new JPanel();
+        group.setLayout(new BoxLayout(group, BoxLayout.Y_AXIS));
+        group.setBorder(groupBorder("transformações"));
 
-        section.add(new JLabel("Translação (dx)"));
-        section.add(new JSlider(-200, 200, 0));
-        section.add(new JLabel("Translação (dy)"));
-        section.add(new JSlider(-200, 200, 0));
-        section.add(new JLabel("Rotação (graus)"));
-        section.add(new JSlider(-180, 180, 0));
-        section.add(new JLabel("Escala (sx, sy) x10"));
-        section.add(new JSlider(1, 50, 10));
-        section.add(new JButton("Refletir X"));
-        section.add(new JButton("Refletir Y"));
-        section.add(new JButton("Refletir XY"));
-        section.add(new JButton("Aplicar transformação"));
+        JSlider dxSlider = new JSlider(-TRANSLATION_RANGE, TRANSLATION_RANGE, 0);
+        JSlider dySlider = new JSlider(-TRANSLATION_RANGE, TRANSLATION_RANGE, 0);
+        JSlider rotationSlider = new JSlider(-ROTATION_RANGE, ROTATION_RANGE, 0);
+        JSlider scaleSlider = new JSlider(SCALE_MIN, SCALE_MAX, SCALE_DEFAULT);
 
-        return section;
+        group.add(sliderRow(dxSlider, v -> "Translação X: " + v));
+        group.add(sliderRow(dySlider, v -> "Translação Y: " + v));
+        group.add(sliderRow(rotationSlider, v -> "Rotação: " + v + "°"));
+        group.add(sliderRow(scaleSlider, v -> String.format("Escala: %.1fx", v / SCALE_DIVISOR)));
+
+        JButton applyButton = new JButton("Aplicar transformação");
+        applyButton.addActionListener(e -> {
+            double scale = scaleSlider.getValue() / SCALE_DIVISOR;
+            Matrix3 rotateAndScale = Transformations.rotation(rotationSlider.getValue())
+                    .multiply(Transformations.scale(scale, scale));
+            applyPivoted(drawingPanel, rotateAndScale);
+            drawingPanel.applyTransform(Transformations.translation(dxSlider.getValue(), dySlider.getValue()));
+        });
+        fixedSize(applyButton, Dimensions.LABEL_WIDTH + Dimensions.GAP + Dimensions.SLIDER_WIDTH);
+        group.add(applyButton);
+
+        return group;
+    }
+
+    private JPanel buildImageGroup(DrawingPanel drawingPanel) {
+        JPanel group = new JPanel(new GridLayout(0, 1, Dimensions.GAP, Dimensions.GAP));
+        group.setBorder(groupBorder("imagem"));
+
+        JButton flipHButton = new JButton(Icons.FLIP_HORIZONTAL + " Inverter Horizontal");
+        flipHButton.addActionListener(e -> applyPivoted(drawingPanel, Transformations.reflectionY()));
+        fixedSize(flipHButton, Dimensions.BUTTON_WIDTH);
+        group.add(flipHButton);
+
+        JButton flipVButton = new JButton(Icons.FLIP_VERTICAL + " Inverter Vertical");
+        flipVButton.addActionListener(e -> applyPivoted(drawingPanel, Transformations.reflectionX()));
+        fixedSize(flipVButton, Dimensions.BUTTON_WIDTH);
+        group.add(flipVButton);
+
+        JButton flipBothButton = new JButton("Inverter H+V");
+        flipBothButton.addActionListener(e -> applyPivoted(drawingPanel, Transformations.reflectionXY()));
+        fixedSize(flipBothButton, Dimensions.BUTTON_WIDTH);
+        group.add(flipBothButton);
+
+        return group;
+    }
+
+    private void applyPivoted(DrawingPanel drawingPanel, Matrix3 rawMatrix) {
+        Point2D center = drawingPanel.getSelectionCenter();
+        if (center == null) {
+            return;
+        }
+        Matrix3 matrix = Transformations.translation(center.getX(), center.getY())
+                .multiply(rawMatrix)
+                .multiply(Transformations.translation(-center.getX(), -center.getY()));
+        drawingPanel.applyTransform(matrix);
+    }
+
+    private void addToolToggle(JPanel section, ButtonGroup group, String label, Tool tool, DrawingPanel drawingPanel, boolean selected) {
+        JToggleButton button = new JToggleButton(label, selected);
+        button.addActionListener(e -> drawingPanel.setCurrentTool(tool));
+        fixedSize(button, Dimensions.BUTTON_WIDTH);
+        group.add(button);
+        section.add(button);
+    }
+
+    private JPanel radioColumn(String header, RadioOption... options) {
+        JPanel column = new JPanel();
+        column.setLayout(new BoxLayout(column, BoxLayout.Y_AXIS));
+        column.add(new JLabel(header));
+
+        ButtonGroup group = new ButtonGroup();
+        for (RadioOption option : options) {
+            JRadioButton radio = new JRadioButton(option.label(), option.selected());
+            if (option.onSelect() != null) {
+                radio.addActionListener(option.onSelect());
+            }
+            fixedHeight(radio);
+            group.add(radio);
+            column.add(radio);
+        }
+        return column;
+    }
+
+    private JPanel sliderRow(JSlider slider, IntFunction<String> textFor) {
+        JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, Dimensions.GAP, Dimensions.GAP));
+        JLabel label = new JLabel(textFor.apply(slider.getValue()));
+        label.setPreferredSize(new Dimension(Dimensions.LABEL_WIDTH, Dimensions.ROW_HEIGHT));
+        slider.setPreferredSize(new Dimension(Dimensions.SLIDER_WIDTH, Dimensions.ROW_HEIGHT));
+        slider.addChangeListener(e -> label.setText(textFor.apply(slider.getValue())));
+        row.add(label);
+        row.add(slider);
+        return row;
+    }
+
+    private void fixedSize(AbstractButton button, int width) {
+        button.setPreferredSize(new Dimension(width, Dimensions.ROW_HEIGHT));
+    }
+
+    private void fixedHeight(JComponent component) {
+        component.setPreferredSize(new Dimension(component.getPreferredSize().width, Dimensions.ROW_HEIGHT));
+    }
+
+    private TitledBorder groupBorder(String title) {
+        TitledBorder border = BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.GRAY), title);
+        border.setTitleJustification(TitledBorder.CENTER);
+        border.setTitlePosition(TitledBorder.BELOW_BOTTOM);
+        return border;
+    }
+
+    private record RadioOption(String label, boolean selected, ActionListener onSelect) {
     }
 }

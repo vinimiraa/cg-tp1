@@ -4,6 +4,7 @@ public enum Tool {
     PAN_ZOOM,
     ADD_LINE,
     ADD_CIRCLE,
-    DEFINE_CLIP_WINDOW,
-    TRANSFORM
+    ADD_POLYGON,
+    SELECT_RECT,
+    DEFINE_CLIP_WINDOW
 }

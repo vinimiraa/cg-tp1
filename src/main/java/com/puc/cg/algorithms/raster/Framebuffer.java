@@ -1,5 +1,6 @@
 package com.puc.cg.algorithms.raster;
 
+import com.puc.cg.commons.util.Palette;
 import lombok.Getter;
 
 import java.awt.image.BufferedImage;
@@ -10,14 +11,16 @@ public class Framebuffer {
 
     public Framebuffer(int width, int height) {
         image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-        clear(0xFFFFFF);
+        clear(Palette.WHITE);
     }
 
     public void setPixel(int x, int y, int rgb) {
-        if (x < 0 || y < 0 || x >= image.getWidth() || y >= image.getHeight()) {
+        int px = x + image.getWidth() / 2;
+        int py = y + image.getHeight() / 2;
+        if (px < 0 || py < 0 || px >= image.getWidth() || py >= image.getHeight()) {
             return;
         }
-        image.setRGB(x, y, rgb);
+        image.setRGB(px, py, rgb);
     }
 
     public void clear(int rgb) {
