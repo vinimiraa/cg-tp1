@@ -1,10 +1,10 @@
 package com.puc.cg.ui.screens;
 
+import com.puc.cg.algorithms.clipping.ClipAlgorithm;
+import com.puc.cg.algorithms.raster.LineAlgorithm;
 import com.puc.cg.algorithms.transform.Matrix3;
 import com.puc.cg.algorithms.transform.Transformations;
-import com.puc.cg.commons.enums.ClipAlgorithm;
-import com.puc.cg.commons.enums.LineAlgorithm;
-import com.puc.cg.commons.model.Point2D;
+import com.puc.cg.commons.models.Point2D;
 import com.puc.cg.commons.util.Dimensions;
 import com.puc.cg.commons.util.Icons;
 import com.puc.cg.ui.Tool;
@@ -159,9 +159,9 @@ public class ToolPanel extends JPanel {
         if (center == null) {
             return;
         }
-        Matrix3 matrix = Transformations.translation(center.getX(), center.getY())
+        Matrix3 matrix = Transformations.translation(center.x(), center.y())
                 .multiply(rawMatrix)
-                .multiply(Transformations.translation(-center.getX(), -center.getY()));
+                .multiply(Transformations.translation(-center.x(), -center.y()));
         drawingPanel.applyTransform(matrix);
     }
 

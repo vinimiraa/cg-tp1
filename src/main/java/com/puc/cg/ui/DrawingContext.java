@@ -1,10 +1,8 @@
 package com.puc.cg.ui;
 
-import com.puc.cg.commons.model.Circle;
-import com.puc.cg.commons.model.LineSegment;
-import com.puc.cg.commons.model.Point2D;
-import com.puc.cg.commons.model.Polygon2D;
-import com.puc.cg.commons.model.Scene;
+import com.puc.cg.commons.models.Point2D;
+import com.puc.cg.commons.models.Shape;
+import com.puc.cg.commons.util.Scene;
 
 import java.util.List;
 
@@ -23,5 +21,5 @@ public interface DrawingContext {
 
     void clearPreview();
 
-    void setSelection(List<LineSegment> lines, List<Circle> circles, List<Polygon2D> polygons);
+    void setSelection(List<Shape> shapes);
 }

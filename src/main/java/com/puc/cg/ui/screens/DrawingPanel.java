@@ -1,14 +1,12 @@
 package com.puc.cg.ui.screens;
 
-import com.puc.cg.algorithms.raster.Framebuffer;
+import com.puc.cg.algorithms.clipping.ClipAlgorithm;
+import com.puc.cg.algorithms.raster.LineAlgorithm;
 import com.puc.cg.algorithms.transform.Matrix3;
-import com.puc.cg.commons.enums.ClipAlgorithm;
-import com.puc.cg.commons.enums.LineAlgorithm;
-import com.puc.cg.commons.model.Circle;
-import com.puc.cg.commons.model.LineSegment;
-import com.puc.cg.commons.model.Point2D;
-import com.puc.cg.commons.model.Polygon2D;
-import com.puc.cg.commons.model.Scene;
+import com.puc.cg.commons.models.Point2D;
+import com.puc.cg.commons.models.Shape;
+import com.puc.cg.commons.util.Framebuffer;
+import com.puc.cg.commons.util.Scene;
 import com.puc.cg.ui.DrawingContext;
 import com.puc.cg.ui.DrawingTool;
 import com.puc.cg.ui.PreviewState;
@@ -53,10 +51,8 @@ public class DrawingPanel extends JPanel implements DrawingContext {
     private final PreviewState preview = new PreviewState();
     private final Viewport viewport = new Viewport();
     private final SceneRenderer renderer = new SceneRenderer();
-
-    private Framebuffer framebuffer = new Framebuffer(INITIAL_WIDTH, INITIAL_HEIGHT);
-
     private final Map<Tool, DrawingTool> tools = new EnumMap<>(Tool.class);
+    private Framebuffer framebuffer = new Framebuffer(INITIAL_WIDTH, INITIAL_HEIGHT);
     private Tool currentTool = Tool.PAN_ZOOM;
 
     @Setter
@@ -106,7 +102,7 @@ public class DrawingPanel extends JPanel implements DrawingContext {
             @Override
             public void mouseMoved(MouseEvent e) {
                 Point2D modelPoint = toModelPoint(e);
-                updateStatus(modelPoint.getX(), modelPoint.getY());
+                updateStatus(modelPoint.x(), modelPoint.y());
                 DrawingTool tool = tools.get(currentTool);
                 if (tool != null) {
                     tool.onMouseMoved(modelPoint, DrawingPanel.this);
@@ -159,13 +155,13 @@ public class DrawingPanel extends JPanel implements DrawingContext {
             repaint();
         }
         Point2D modelPoint = toModelPoint(e);
-        updateStatus(modelPoint.getX(), modelPoint.getY());
+        updateStatus(modelPoint.x(), modelPoint.y());
     }
 
     private void handleMouseWheel(MouseWheelEvent e) {
         viewport.zoomAt(e.getX(), e.getY(), e.getPreciseWheelRotation(), framebuffer.getWidth(), framebuffer.getHeight());
         Point2D modelPoint = toModelPoint(e);
-        updateStatus(modelPoint.getX(), modelPoint.getY());
+        updateStatus(modelPoint.x(), modelPoint.y());
         repaint();
     }
 
@@ -249,8 +245,8 @@ public class DrawingPanel extends JPanel implements DrawingContext {
     }
 
     @Override
-    public void setSelection(List<LineSegment> lines, List<Circle> circles, List<Polygon2D> polygons) {
-        selection.set(lines, circles, polygons);
+    public void setSelection(List<Shape> shapes) {
+        selection.set(shapes);
         requestRedraw();
     }
 

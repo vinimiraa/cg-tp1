@@ -1,9 +1,8 @@
 package com.puc.cg.ui.tools;
 
-import com.puc.cg.commons.model.Circle;
-import com.puc.cg.commons.model.LineSegment;
-import com.puc.cg.commons.model.Point2D;
-import com.puc.cg.commons.model.Polygon2D;
+import com.puc.cg.commons.models.Point2D;
+import com.puc.cg.commons.models.Shape;
+import com.puc.cg.commons.models.Window;
 import com.puc.cg.ui.DrawingContext;
 import com.puc.cg.ui.DrawingTool;
 
@@ -22,33 +21,20 @@ public class SelectionTool implements DrawingTool {
             return;
         }
 
-        double xMin = Math.min(pendingCorner.getX(), point.getX());
-        double xMax = Math.max(pendingCorner.getX(), point.getX());
-        double yMin = Math.min(pendingCorner.getY(), point.getY());
-        double yMax = Math.max(pendingCorner.getY(), point.getY());
+        double xMin = Math.min(pendingCorner.x(), point.x());
+        double xMax = Math.max(pendingCorner.x(), point.x());
+        double yMin = Math.min(pendingCorner.y(), point.y());
+        double yMax = Math.max(pendingCorner.y(), point.y());
+        Window region = new Window(xMin, yMin, xMax, yMax);
 
-        List<LineSegment> lines = new ArrayList<>();
-        for (LineSegment line : context.getScene().getLines()) {
-            if (inside(line.start(), xMin, xMax, yMin, yMax) && inside(line.end(), xMin, xMax, yMin, yMax)) {
-                lines.add(line);
+        List<Shape> selected = new ArrayList<>();
+        for (Shape shape : context.getScene().getShapes()) {
+            if (fullyInside(shape.bounds(), region)) {
+                selected.add(shape);
             }
         }
 
-        List<Circle> circles = new ArrayList<>();
-        for (Circle circle : context.getScene().getCircles()) {
-            if (inside(circle.center(), xMin, xMax, yMin, yMax)) {
-                circles.add(circle);
-            }
-        }
-
-        List<Polygon2D> polygons = new ArrayList<>();
-        for (Polygon2D polygon : context.getScene().getPolygons()) {
-            if (allInside(polygon, xMin, xMax, yMin, yMax)) {
-                polygons.add(polygon);
-            }
-        }
-
-        context.setSelection(lines, circles, polygons);
+        context.setSelection(selected);
         pendingCorner = null;
         context.clearPreview();
     }
@@ -71,16 +57,10 @@ public class SelectionTool implements DrawingTool {
         pendingCorner = null;
     }
 
-    private boolean allInside(Polygon2D polygon, double xMin, double xMax, double yMin, double yMax) {
-        for (Point2D vertex : polygon.getVertices()) {
-            if (!inside(vertex, xMin, xMax, yMin, yMax)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private boolean inside(Point2D p, double xMin, double xMax, double yMin, double yMax) {
-        return p.getX() >= xMin && p.getX() <= xMax && p.getY() >= yMin && p.getY() <= yMax;
+    private boolean fullyInside(Window shapeBounds, Window region) {
+        return shapeBounds.xMin() >= region.xMin()
+                && shapeBounds.xMax() <= region.xMax()
+                && shapeBounds.yMin() >= region.yMin()
+                && shapeBounds.yMax() <= region.yMax();
     }
 }

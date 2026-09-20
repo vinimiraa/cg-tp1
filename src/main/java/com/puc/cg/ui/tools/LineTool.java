@@ -1,7 +1,7 @@
 package com.puc.cg.ui.tools;
 
-import com.puc.cg.commons.model.LineSegment;
-import com.puc.cg.commons.model.Point2D;
+import com.puc.cg.commons.models.Point2D;
+import com.puc.cg.commons.models.impl.LineSegment;
 import com.puc.cg.ui.DrawingContext;
 import com.puc.cg.ui.DrawingTool;
 
@@ -22,7 +22,7 @@ public class LineTool implements DrawingTool {
             return;
         }
 
-        context.getScene().getLines().add(new LineSegment(pendingStart, point));
+        context.getScene().getShapes().add(new LineSegment(pendingStart, point));
         pendingStart = null;
         context.clearPreview();
     }

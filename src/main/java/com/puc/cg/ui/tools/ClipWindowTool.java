@@ -1,7 +1,7 @@
 package com.puc.cg.ui.tools;
 
-import com.puc.cg.commons.model.Point2D;
-import com.puc.cg.commons.model.Window;
+import com.puc.cg.commons.models.Point2D;
+import com.puc.cg.commons.models.Window;
 import com.puc.cg.ui.DrawingContext;
 import com.puc.cg.ui.DrawingTool;
 
@@ -22,10 +22,10 @@ public class ClipWindowTool implements DrawingTool {
             return;
         }
 
-        double xMin = Math.min(pendingCorner.getX(), point.getX());
-        double xMax = Math.max(pendingCorner.getX(), point.getX());
-        double yMin = Math.min(pendingCorner.getY(), point.getY());
-        double yMax = Math.max(pendingCorner.getY(), point.getY());
+        double xMin = Math.min(pendingCorner.x(), point.x());
+        double xMax = Math.max(pendingCorner.x(), point.x());
+        double yMin = Math.min(pendingCorner.y(), point.y());
+        double yMax = Math.max(pendingCorner.y(), point.y());
 
         context.getScene().setClipWindow(new Window(xMin, yMin, xMax, yMax));
         pendingCorner = null;

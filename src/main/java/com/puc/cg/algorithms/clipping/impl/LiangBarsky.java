@@ -1,9 +1,9 @@
 package com.puc.cg.algorithms.clipping.impl;
 
 import com.puc.cg.algorithms.clipping.ClipWindowAlgorithm;
-import com.puc.cg.commons.model.Window;
-import com.puc.cg.commons.model.LineSegment;
-import com.puc.cg.commons.model.Point2D;
+import com.puc.cg.commons.models.Point2D;
+import com.puc.cg.commons.models.Window;
+import com.puc.cg.commons.models.impl.LineSegment;
 
 public class LiangBarsky implements ClipWindowAlgorithm {
 
@@ -14,18 +14,18 @@ public class LiangBarsky implements ClipWindowAlgorithm {
         double[] u1 = {0.0};
         double[] u2 = {1.0};
 
-        double x1 = line.start().getX();
-        double y1 = line.start().getY();
-        double x2 = line.end().getX();
-        double y2 = line.end().getY();
+        double x1 = line.start().x();
+        double y1 = line.start().y();
+        double x2 = line.end().x();
+        double y2 = line.end().y();
 
         double dx = x2 - x1;
         double dy = y2 - y1;
 
-        if (cliptest(-dx, x1 - window.getXMin(), u1, u2)) {
-            if (cliptest(dx, window.getXMax() - x1, u1, u2)) {
-                if (cliptest(-dy, y1 - window.getYMin(), u1, u2)) {
-                    if (cliptest(dy, window.getYMax() - y1, u1, u2)) {
+        if (cliptest(-dx, x1 - window.xMin(), u1, u2)) {
+            if (cliptest(dx, window.xMax() - x1, u1, u2)) {
+                if (cliptest(-dy, y1 - window.yMin(), u1, u2)) {
+                    if (cliptest(dy, window.yMax() - y1, u1, u2)) {
                         if (u2[0] < 1.0) {
                             x2 = x1 + u2[0] * dx;
                             y2 = y1 + u2[0] * dy;

@@ -1,23 +1,17 @@
 package com.puc.cg.ui;
 
 import com.puc.cg.algorithms.clipping.ClipWindowAlgorithm;
-import com.puc.cg.algorithms.clipping.impl.CohenSutherland;
-import com.puc.cg.algorithms.clipping.impl.LiangBarsky;
 import com.puc.cg.algorithms.raster.CircleRasterizerAlgorithm;
-import com.puc.cg.algorithms.raster.Framebuffer;
 import com.puc.cg.algorithms.raster.LineRasterizerAlgorithm;
 import com.puc.cg.algorithms.raster.impl.CircleRasterizerBresenhamImpl;
-import com.puc.cg.algorithms.raster.impl.LineRasterizerBresenhamImpl;
-import com.puc.cg.algorithms.raster.impl.LineRasterizerDDAImpl;
-import com.puc.cg.commons.enums.ClipAlgorithm;
-import com.puc.cg.commons.enums.LineAlgorithm;
-import com.puc.cg.commons.model.Circle;
-import com.puc.cg.commons.model.LineSegment;
-import com.puc.cg.commons.model.Point2D;
-import com.puc.cg.commons.model.Polygon2D;
-import com.puc.cg.commons.model.Scene;
-import com.puc.cg.commons.model.Window;
+import com.puc.cg.commons.models.Point2D;
+import com.puc.cg.commons.models.Shape;
+import com.puc.cg.commons.models.Window;
+import com.puc.cg.commons.models.impl.Circle;
+import com.puc.cg.commons.models.impl.LineSegment;
+import com.puc.cg.commons.util.Framebuffer;
 import com.puc.cg.commons.util.Palette;
+import com.puc.cg.commons.util.Scene;
 
 import java.util.List;
 
@@ -27,43 +21,30 @@ public class SceneRenderer {
     private static final int DASH_LENGTH = 4;
     private static final int ORIGIN_MARKER_RADIUS = 4;
 
-    private final LineRasterizerAlgorithm ddaRasterizer = new LineRasterizerDDAImpl();
-    private final LineRasterizerAlgorithm bresenhamRasterizer = new LineRasterizerBresenhamImpl();
     private final CircleRasterizerAlgorithm circleRasterizer = new CircleRasterizerBresenhamImpl();
-    private final ClipWindowAlgorithm cohenSutherlandClipper = new CohenSutherland();
-    private final ClipWindowAlgorithm liangBarskyClipper = new LiangBarsky();
 
     public void render(
             Framebuffer framebuffer,
             Scene scene,
             Selection selection,
             PreviewState preview,
-            LineAlgorithm lineAlgorithm,
-            ClipAlgorithm clipAlgorithm
+            LineRasterizerAlgorithm lineRasterizer,
+            ClipWindowAlgorithm clipper
     ) {
-        LineRasterizerAlgorithm lineRasterizer = lineRasterizerFor(lineAlgorithm);
-        ClipWindowAlgorithm clipper = clipperFor(clipAlgorithm);
-
         framebuffer.clear(Palette.WHITE);
         drawGrid(framebuffer);
 
         Window clipWindow = scene.getClipWindow();
-        for (LineSegment line : scene.getLines()) {
-            LineSegment toDraw = clipWindow == null ? line : clipper.clip(line, clipWindow);
-            if (toDraw != null) {
-                int color = selection.contains(line) ? Palette.SELECTION_HIGHLIGHT : Palette.BLACK;
-                lineRasterizer.draw(framebuffer, toDraw.start(), toDraw.end(), color);
+        for (Shape shape : scene.getShapes()) {
+            Shape toDraw = shape;
+            if (clipWindow != null && shape instanceof LineSegment line) {
+                toDraw = clipper.clip(line, clipWindow);
+                if (toDraw == null) {
+                    continue;
+                }
             }
-        }
-
-        for (Circle circle : scene.getCircles()) {
-            int color = selection.contains(circle) ? Palette.SELECTION_HIGHLIGHT : Palette.BLACK;
-            circleRasterizer.draw(framebuffer, circle.center(), circle.radius(), color);
-        }
-
-        for (Polygon2D polygon : scene.getPolygons()) {
-            int color = selection.contains(polygon) ? Palette.SELECTION_HIGHLIGHT : Palette.BLACK;
-            drawPolygon(framebuffer, lineRasterizer, polygon, color);
+            int color = selection.contains(shape) ? Palette.SELECTION_HIGHLIGHT : Palette.BLACK;
+            toDraw.draw(framebuffer, lineRasterizer, circleRasterizer, color);
         }
 
         if (clipWindow != null) {
@@ -76,23 +57,6 @@ public class SceneRenderer {
         }
 
         drawActivePreview(framebuffer, lineRasterizer, preview);
-    }
-
-    private LineRasterizerAlgorithm lineRasterizerFor(LineAlgorithm algorithm) {
-        return algorithm == LineAlgorithm.DDA ? ddaRasterizer : bresenhamRasterizer;
-    }
-
-    private ClipWindowAlgorithm clipperFor(ClipAlgorithm algorithm) {
-        return algorithm == ClipAlgorithm.COHEN_SUTHERLAND ? cohenSutherlandClipper : liangBarskyClipper;
-    }
-
-    private void drawPolygon(Framebuffer framebuffer, LineRasterizerAlgorithm lineRasterizer, Polygon2D polygon, int rgb) {
-        List<Point2D> vertices = polygon.getVertices();
-        for (int i = 0; i < vertices.size(); i++) {
-            Point2D from = vertices.get(i);
-            Point2D to = vertices.get((i + 1) % vertices.size());
-            lineRasterizer.draw(framebuffer, from, to, rgb);
-        }
     }
 
     private void drawActivePreview(Framebuffer framebuffer, LineRasterizerAlgorithm lineRasterizer, PreviewState preview) {
@@ -111,7 +75,7 @@ public class SceneRenderer {
         Window previewRect = preview.getRect();
         if (previewRect != null) {
             drawWindowOutline(framebuffer, previewRect, Palette.RED);
-            drawMarker(framebuffer, new Point2D(previewRect.getXMin(), previewRect.getYMin()), Palette.RED);
+            drawMarker(framebuffer, new Point2D(previewRect.xMin(), previewRect.yMin()), Palette.RED);
         }
 
         List<Point2D> polygonVertices = preview.getPolygonVertices();
@@ -126,8 +90,8 @@ public class SceneRenderer {
     }
 
     private void drawMarker(Framebuffer framebuffer, Point2D point, int rgb) {
-        int cx = (int) Math.round(point.getX());
-        int cy = (int) Math.round(point.getY());
+        int cx = (int) Math.round(point.x());
+        int cy = (int) Math.round(point.y());
         for (int offset = -MARKER_ARM_LENGTH; offset <= MARKER_ARM_LENGTH; offset++) {
             framebuffer.setPixel(cx + offset, cy, rgb);
             framebuffer.setPixel(cx, cy + offset, rgb);
@@ -135,10 +99,10 @@ public class SceneRenderer {
     }
 
     private void drawWindowOutline(Framebuffer framebuffer, Window window, int rgb) {
-        int xMin = (int) Math.round(window.getXMin());
-        int xMax = (int) Math.round(window.getXMax());
-        int yMin = (int) Math.round(window.getYMin());
-        int yMax = (int) Math.round(window.getYMax());
+        int xMin = (int) Math.round(window.xMin());
+        int xMax = (int) Math.round(window.xMax());
+        int yMin = (int) Math.round(window.yMin());
+        int yMax = (int) Math.round(window.yMax());
 
         for (int x = xMin; x <= xMax; x++) {
             framebuffer.setPixel(x, yMin, rgb);
@@ -151,10 +115,10 @@ public class SceneRenderer {
     }
 
     private void drawDashedWindowOutline(Framebuffer framebuffer, Window window, int rgb) {
-        int xMin = (int) Math.round(window.getXMin());
-        int xMax = (int) Math.round(window.getXMax());
-        int yMin = (int) Math.round(window.getYMin());
-        int yMax = (int) Math.round(window.getYMax());
+        int xMin = (int) Math.round(window.xMin());
+        int xMax = (int) Math.round(window.xMax());
+        int yMin = (int) Math.round(window.yMin());
+        int yMax = (int) Math.round(window.yMax());
 
         for (int x = xMin; x <= xMax; x++) {
             if (Math.floorDiv(x, DASH_LENGTH) % 2 == 0) {

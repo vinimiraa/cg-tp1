@@ -1,7 +1,7 @@
 package com.puc.cg.ui.tools;
 
-import com.puc.cg.commons.model.Point2D;
-import com.puc.cg.commons.model.Polygon2D;
+import com.puc.cg.commons.models.Point2D;
+import com.puc.cg.commons.models.impl.Polygon2D;
 import com.puc.cg.ui.DrawingContext;
 import com.puc.cg.ui.DrawingTool;
 
@@ -32,7 +32,7 @@ public class PolygonTool implements DrawingTool {
             for (Point2D vertex : pendingVertices) {
                 polygon.addVertex(vertex);
             }
-            context.getScene().getPolygons().add(polygon);
+            context.getScene().getShapes().add(polygon);
         }
         pendingVertices.clear();
         context.clearPreview();

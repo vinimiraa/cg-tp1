@@ -1,13 +1,6 @@
 package com.puc.cg.algorithms.transform;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-
-@Getter
-@AllArgsConstructor
-public class Matrix3 {
-    private final double[][] m;
-
+public record Matrix3(double[][] m) {
     public static Matrix3 identity() {
         return new Matrix3(new double[][]{
                 {1, 0, 0},

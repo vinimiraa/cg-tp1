@@ -1,6 +1,5 @@
-package com.puc.cg.algorithms.raster;
+package com.puc.cg.commons.util;
 
-import com.puc.cg.commons.util.Palette;
 import lombok.Getter;
 
 import java.awt.image.BufferedImage;

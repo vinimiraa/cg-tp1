@@ -1,18 +1,18 @@
 package com.puc.cg.algorithms.clipping.impl;
 
 import com.puc.cg.algorithms.clipping.ClipWindowAlgorithm;
-import com.puc.cg.commons.model.LineSegment;
-import com.puc.cg.commons.model.Point2D;
-import com.puc.cg.commons.model.Window;
+import com.puc.cg.commons.models.Point2D;
+import com.puc.cg.commons.models.Window;
+import com.puc.cg.commons.models.impl.LineSegment;
 
 public class CohenSutherland implements ClipWindowAlgorithm {
 
     @Override
     public LineSegment clip(LineSegment line, Window window) {
-        double x1 = line.start().getX();
-        double y1 = line.start().getY();
-        double x2 = line.end().getX();
-        double y2 = line.end().getY();
+        double x1 = line.start().x();
+        double y1 = line.start().y();
+        double x2 = line.end().x();
+        double y2 = line.end().y();
 
         LineSegment result = null;
         boolean done = false;
@@ -32,17 +32,17 @@ public class CohenSutherland implements ClipWindowAlgorithm {
                 int codeOut = code1 != 0 ? code1 : code2;
 
                 if ((codeOut & 8) != 0) { // acima
-                    intersectionX = x1 + (x2 - x1) * (window.getYMax() - y1) / (y2 - y1);
-                    intersectionY = window.getYMax();
+                    intersectionX = x1 + (x2 - x1) * (window.yMax() - y1) / (y2 - y1);
+                    intersectionY = window.yMax();
                 } else if ((codeOut & 4) != 0) { // abaixo
-                    intersectionX = x1 + (x2 - x1) * (window.getYMin() - y1) / (y2 - y1);
-                    intersectionY = window.getYMin();
+                    intersectionX = x1 + (x2 - x1) * (window.yMin() - y1) / (y2 - y1);
+                    intersectionY = window.yMin();
                 } else if ((codeOut & 2) != 0) { // direita
-                    intersectionY = y1 + (y2 - y1) * (window.getXMax() - x1) / (x2 - x1);
-                    intersectionX = window.getXMax();
+                    intersectionY = y1 + (y2 - y1) * (window.xMax() - x1) / (x2 - x1);
+                    intersectionX = window.xMax();
                 } else if ((codeOut & 1) != 0) { // esquerda
-                    intersectionY = y1 + (y2 - y1) * (window.getXMin() - x1) / (x2 - x1);
-                    intersectionX = window.getXMin();
+                    intersectionY = y1 + (y2 - y1) * (window.xMin() - x1) / (x2 - x1);
+                    intersectionX = window.xMin();
                 }
 
                 if (codeOut == code1) {
@@ -61,10 +61,10 @@ public class CohenSutherland implements ClipWindowAlgorithm {
     private int getRegionCode(double x, double y, Window window) {
         int code = 0;
 
-        if (x < window.getXMin()) code += 1; // esq
-        if (x > window.getXMax()) code += 2; // dir
-        if (y < window.getYMin()) code += 4; // inf
-        if (y > window.getYMax()) code += 8; // sup
+        if (x < window.xMin()) code += 1; // esq
+        if (x > window.xMax()) code += 2; // dir
+        if (y < window.yMin()) code += 4; // inf
+        if (y > window.yMax()) code += 8; // sup
 
         return code;
     }

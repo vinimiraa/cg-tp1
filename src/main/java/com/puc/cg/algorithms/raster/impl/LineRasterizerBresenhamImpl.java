@@ -1,15 +1,15 @@
 package com.puc.cg.algorithms.raster.impl;
 
-import com.puc.cg.algorithms.raster.Framebuffer;
 import com.puc.cg.algorithms.raster.LineRasterizerAlgorithm;
-import com.puc.cg.commons.model.Point2D;
+import com.puc.cg.commons.models.Point2D;
+import com.puc.cg.commons.util.Framebuffer;
 
 public class LineRasterizerBresenhamImpl implements LineRasterizerAlgorithm {
 
     @Override
     public void draw(Framebuffer buffer, Point2D start, Point2D end, int rgb) {
-        int dx = (int) (end.getX() - start.getX());
-        int dy = (int) (end.getY() - start.getY());
+        int dx = (int) (end.x() - start.x());
+        int dy = (int) (end.y() - start.y());
 
         int xIncrement = resolveIncrement(dx);
         int yIncrement = resolveIncrement(dy);
@@ -44,8 +44,8 @@ public class LineRasterizerBresenhamImpl implements LineRasterizerAlgorithm {
             int xIncrement, int yIncrement,
             int rgb
     ) {
-        int x = (int) start.getX();
-        int y = (int) start.getY();
+        int x = (int) start.x();
+        int y = (int) start.y();
 
         int p = 2 * dy - dx;
         int c1 = 2 * dy;
@@ -74,8 +74,8 @@ public class LineRasterizerBresenhamImpl implements LineRasterizerAlgorithm {
             int xIncrement, int yIncrement,
             int rgb
     ) {
-        int x = (int) start.getX();
-        int y = (int) start.getY();
+        int x = (int) start.x();
+        int y = (int) start.y();
 
         int p = 2 * dx - dy;
         int c1 = 2 * dx;

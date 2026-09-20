@@ -1,7 +1,7 @@
 package com.puc.cg.ui.tools;
 
-import com.puc.cg.commons.model.Circle;
-import com.puc.cg.commons.model.Point2D;
+import com.puc.cg.commons.models.Point2D;
+import com.puc.cg.commons.models.impl.Circle;
 import com.puc.cg.ui.DrawingContext;
 import com.puc.cg.ui.DrawingTool;
 
@@ -22,7 +22,7 @@ public class CircleTool implements DrawingTool {
             return;
         }
 
-        context.getScene().getCircles().add(new Circle(pendingCenter, radiusTo(point)));
+        context.getScene().getShapes().add(new Circle(pendingCenter, radiusTo(point)));
         pendingCenter = null;
         context.clearPreview();
     }
@@ -47,7 +47,7 @@ public class CircleTool implements DrawingTool {
 
     private int radiusTo(Point2D point) {
         return (int) Math.round(Math.hypot(
-                point.getX() - pendingCenter.getX(),
-                point.getY() - pendingCenter.getY()));
+                point.x() - pendingCenter.x(),
+                point.y() - pendingCenter.y()));
     }
 }

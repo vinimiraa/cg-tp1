@@ -1,6 +1,6 @@
 package com.puc.cg.ui;
 
-import com.puc.cg.commons.model.Point2D;
+import com.puc.cg.commons.models.Point2D;
 
 public interface DrawingTool {
     void onMousePressed(Point2D point, DrawingContext context);

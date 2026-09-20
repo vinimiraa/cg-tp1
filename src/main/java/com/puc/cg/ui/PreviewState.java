@@ -1,9 +1,9 @@
 package com.puc.cg.ui;
 
-import com.puc.cg.commons.model.Circle;
-import com.puc.cg.commons.model.LineSegment;
-import com.puc.cg.commons.model.Point2D;
-import com.puc.cg.commons.model.Window;
+import com.puc.cg.commons.models.Point2D;
+import com.puc.cg.commons.models.Window;
+import com.puc.cg.commons.models.impl.Circle;
+import com.puc.cg.commons.models.impl.LineSegment;
 import lombok.Getter;
 
 import java.util.ArrayList;
@@ -29,10 +29,10 @@ public class PreviewState {
 
     public void setRect(Point2D corner1, Point2D corner2) {
         clear();
-        double xMin = Math.min(corner1.getX(), corner2.getX());
-        double xMax = Math.max(corner1.getX(), corner2.getX());
-        double yMin = Math.min(corner1.getY(), corner2.getY());
-        double yMax = Math.max(corner1.getY(), corner2.getY());
+        double xMin = Math.min(corner1.x(), corner2.x());
+        double xMax = Math.max(corner1.x(), corner2.x());
+        double yMin = Math.min(corner1.y(), corner2.y());
+        double yMax = Math.max(corner1.y(), corner2.y());
         rect = new Window(xMin, yMin, xMax, yMax);
     }
 
