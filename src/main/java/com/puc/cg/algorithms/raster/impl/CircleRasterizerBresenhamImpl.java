@@ -10,15 +10,15 @@ public class CircleRasterizerBresenhamImpl implements CircleRasterizerAlgorithm 
     public void draw(Framebuffer buffer, Point2D center, int radius, int rgb) {
         int x = 0;
         int y = radius;
-        int d = 3 - 2 * radius;
+        int p = 3 - 2 * radius;
 
         this.setPixelSymmetric(buffer, center, x, y, rgb);
 
         while (x < y) {
-            if (d < 0) {
-                d += 4 * x + 6;
+            if (p < 0) {
+                p += 4 * x + 6;
             } else {
-                d += 4 * (x - y) + 10;
+                p += 4 * (x - y) + 10;
                 y--;
             }
             x++;

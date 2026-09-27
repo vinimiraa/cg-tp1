@@ -15,7 +15,7 @@ public class Framebuffer {
 
     public void setPixel(int x, int y, int rgb) {
         int px = x + image.getWidth() / 2;
-        int py = y + image.getHeight() / 2;
+        int py = image.getHeight() / 2 - y - 1;
         if (px < 0 || py < 0 || px >= image.getWidth() || py >= image.getHeight()) {
             return;
         }
@@ -24,13 +24,13 @@ public class Framebuffer {
 
     public int getPixel(int x, int y) {
         int px = x + image.getWidth() / 2;
-        int py = y + image.getHeight() / 2;
+        int py = image.getHeight() / 2 - y - 1;
         return image.getRGB(px, py) & 0xFFFFFF;
     }
 
     public boolean isInBounds(int x, int y) {
         int px = x + image.getWidth() / 2;
-        int py = y + image.getHeight() / 2;
+        int py = image.getHeight() / 2 - y - 1;
         return px < 0 || py < 0 || px >= image.getWidth() || py >= image.getHeight();
     }
 

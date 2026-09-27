@@ -27,16 +27,24 @@ import com.puc.cg.ui.tools.SelectionTool;
 import lombok.Getter;
 import lombok.Setter;
 
+import javax.swing.AbstractAction;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.KeyStroke;
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Dimension;
+import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
+import java.awt.RenderingHints;
+import java.awt.event.ActionEvent;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
@@ -52,6 +60,9 @@ public class DrawingPanel extends JPanel implements DrawingContext {
     private static final int MIN_HEIGHT = 200;
     private static final int GRID_SPACING = 50;
     private static final int ORIGIN_MARKER_RADIUS = 4;
+    private static final double PIXEL_GRID_MIN_ZOOM = 4.0;
+    private static final int MIN_LABEL_SPACING_PX = 28;
+    private static final int[] LABEL_STEPS = {1, 2, 5, 10, 20, 50, 100, 200, 500, 1000};
 
     @Getter
     private final Scene scene = new Scene();
@@ -126,6 +137,26 @@ public class DrawingPanel extends JPanel implements DrawingContext {
         });
 
         addMouseWheelListener(this::handleMouseWheel);
+
+        KeyStroke undoKey = KeyStroke.getKeyStroke(KeyEvent.VK_Z, InputEvent.CTRL_DOWN_MASK);
+        getInputMap(WHEN_IN_FOCUSED_WINDOW).put(undoKey, "undo");
+        getActionMap().put("undo", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                undo();
+            }
+        });
+    }
+
+    public void undo() {
+        if (scene.undo()) {
+            selection.clear();
+            DrawingTool tool = tools.get(currentTool);
+            if (tool != null) {
+                tool.reset();
+            }
+            clearPreview();
+        }
     }
 
     private void resizeFramebuffer() {
@@ -211,6 +242,7 @@ public class DrawingPanel extends JPanel implements DrawingContext {
     }
 
     public void clearScene() {
+        scene.pushHistory();
         scene.clear();
         selection.clear();
         DrawingTool tool = tools.get(currentTool);
@@ -267,9 +299,10 @@ public class DrawingPanel extends JPanel implements DrawingContext {
 
     @Override
     public void applyFill(Point2D seed) {
-        int seedX = (int) Math.round(seed.x());
-        int seedY = (int) Math.round(seed.y());
+        int seedX = (int) Math.floor(seed.x());
+        int seedY = (int) Math.floor(seed.y());
         int refColor = fillMethod == FillMethod.BOUNDARY_FILL ? Palette.BLACK : framebuffer.getPixel(seedX, seedY);
+        scene.pushHistory();
         scene.getFills().add(new FillAction(seed, fillMethod, fillColor, refColor, connectivity));
         requestRedraw();
     }
@@ -284,36 +317,109 @@ public class DrawingPanel extends JPanel implements DrawingContext {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g;
-        g2.translate(viewport.getPanX(), viewport.getPanY());
-        g2.scale(viewport.getZoom(), viewport.getZoom());
-        g2.drawImage(framebuffer.getImage(), 0, 0, null);
+        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+
+        Graphics2D scaled = (Graphics2D) g2.create();
+        scaled.translate(viewport.getPanX(), viewport.getPanY());
+        scaled.scale(viewport.getZoom(), viewport.getZoom());
+        scaled.drawImage(framebuffer.getImage(), 0, 0, null);
+        scaled.dispose();
+
         drawGridOverlay(g2);
     }
 
     private void drawGridOverlay(Graphics2D g2) {
         int width = framebuffer.getWidth();
         int height = framebuffer.getHeight();
-        int centerX = width / 2;
-        int centerY = height / 2;
+        g2.setStroke(new BasicStroke(1f));
 
-        g2.setColor(new Color(Palette.GRID_LINE));
-        for (int x = -centerX; x <= centerX; x += GRID_SPACING) {
-            if (x != 0) {
-                g2.drawLine(x + centerX, 0, x + centerX, height);
-            }
+        if (viewport.getZoom() >= PIXEL_GRID_MIN_ZOOM) {
+            drawGridLines(g2, width, height, 1, Palette.PIXEL_GRID);
         }
-        for (int y = -centerY; y <= centerY; y += GRID_SPACING) {
-            if (y != 0) {
-                g2.drawLine(0, y + centerY, width, y + centerY);
-            }
-        }
+        drawGridLines(g2, width, height, GRID_SPACING, Palette.GRID_LINE);
+        drawAxes(g2, width, height);
+        drawOriginMarker(g2, width, height);
+        drawAxisLabels(g2, width, height);
+    }
 
+    private void drawGridLines(Graphics2D g2, int width, int height, int spacing, int color) {
+        int halfWidth = width / 2;
+        int halfHeight = height / 2;
+        g2.setColor(new Color(color));
+
+        for (int modelX = -halfWidth; modelX <= halfWidth; modelX += spacing) {
+            if (modelX == 0) {
+                continue;
+            }
+            int screenX = (int) Math.round(viewport.toScreenX(modelX, width));
+            g2.drawLine(screenX, 0, screenX, getHeight());
+        }
+        for (int modelY = -halfHeight; modelY <= halfHeight; modelY += spacing) {
+            if (modelY == 0) {
+                continue;
+            }
+            int screenY = (int) Math.round(viewport.toScreenY(modelY, height));
+            g2.drawLine(0, screenY, getWidth(), screenY);
+        }
+    }
+
+    private void drawAxes(Graphics2D g2, int width, int height) {
+        int screenX = (int) Math.round(viewport.toScreenX(0, width));
+        int screenY = (int) Math.round(viewport.toScreenY(0, height));
         g2.setColor(new Color(Palette.GRID_AXIS));
-        g2.drawLine(centerX, 0, centerX, height);
-        g2.drawLine(0, centerY, width, centerY);
+        g2.drawLine(screenX, 0, screenX, getHeight());
+        g2.drawLine(0, screenY, getWidth(), screenY);
+    }
 
+    private void drawOriginMarker(Graphics2D g2, int width, int height) {
+        int screenX = (int) Math.round(viewport.toScreenX(0, width));
+        int screenY = (int) Math.round(viewport.toScreenY(0, height));
         g2.setColor(new Color(Palette.ORIGIN_HIGHLIGHT));
-        g2.fillOval(centerX - ORIGIN_MARKER_RADIUS, centerY - ORIGIN_MARKER_RADIUS,
+        g2.fillOval(screenX - ORIGIN_MARKER_RADIUS, screenY - ORIGIN_MARKER_RADIUS,
                 ORIGIN_MARKER_RADIUS * 2, ORIGIN_MARKER_RADIUS * 2);
+    }
+
+    private void drawAxisLabels(Graphics2D g2, int width, int height) {
+        int step = labelStep();
+        if (step == 0) {
+            return;
+        }
+
+        int halfWidth = width / 2;
+        int halfHeight = height / 2;
+        g2.setFont(g2.getFont().deriveFont(11f));
+        FontMetrics metrics = g2.getFontMetrics();
+
+        for (int modelX = -halfWidth; modelX <= halfWidth; modelX += step) {
+            int screenX = (int) Math.round(viewport.toScreenX(modelX, width));
+            if (screenX >= 0 && screenX <= getWidth()) {
+                drawLabel(g2, metrics, String.valueOf(modelX), screenX + 2, 2);
+            }
+        }
+        for (int modelY = -halfHeight; modelY <= halfHeight; modelY += step) {
+            int screenY = (int) Math.round(viewport.toScreenY(modelY, height));
+            if (screenY >= 0 && screenY <= getHeight()) {
+                drawLabel(g2, metrics, String.valueOf(modelY), 2, screenY + 2);
+            }
+        }
+    }
+
+    private void drawLabel(Graphics2D g2, FontMetrics metrics, String text, int x, int y) {
+        int textWidth = metrics.stringWidth(text);
+        int textHeight = metrics.getAscent();
+        g2.setColor(Color.WHITE);
+        g2.fillRect(x, y, textWidth + 2, textHeight + 2);
+        g2.setColor(Color.DARK_GRAY);
+        g2.drawString(text, x + 1, y + textHeight);
+    }
+
+    private int labelStep() {
+        double zoom = viewport.getZoom();
+        for (int step : LABEL_STEPS) {
+            if (step * zoom >= MIN_LABEL_SPACING_PX) {
+                return step;
+            }
+        }
+        return 0;
     }
 }

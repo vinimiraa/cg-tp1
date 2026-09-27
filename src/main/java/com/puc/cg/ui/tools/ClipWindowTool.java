@@ -22,6 +22,7 @@ public class ClipWindowTool implements DrawingTool {
         double yMin = Math.min(pendingCorner.y(), point.y());
         double yMax = Math.max(pendingCorner.y(), point.y());
 
+        context.getScene().pushHistory();
         context.getScene().setClipWindow(new Window(xMin, yMin, xMax, yMax));
         pendingCorner = null;
         context.clearPreview();

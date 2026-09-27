@@ -4,6 +4,7 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.WindowConstants;
 import java.awt.BorderLayout;
+import java.awt.Frame;
 
 public class MainFrame extends JFrame {
     public MainFrame() {
@@ -20,7 +21,7 @@ public class MainFrame extends JFrame {
         add(drawingPanel, BorderLayout.CENTER);
         add(statusBar, BorderLayout.SOUTH);
 
+        setExtendedState(Frame.MAXIMIZED_BOTH);
         pack();
-        setLocationRelativeTo(null);
     }
 }

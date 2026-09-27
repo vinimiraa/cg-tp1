@@ -17,6 +17,7 @@ public class LineTool implements DrawingTool {
             return;
         }
 
+        context.getScene().pushHistory();
         context.getScene().getShapes().add(new LineSegment(pendingStart, point));
         pendingStart = null;
         context.clearPreview();

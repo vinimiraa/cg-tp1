@@ -32,6 +32,7 @@ public class PolygonTool implements DrawingTool {
             for (Point2D vertex : pendingVertices) {
                 polygon.addVertex(vertex);
             }
+            context.getScene().pushHistory();
             context.getScene().getShapes().add(polygon);
         }
         pendingVertices.clear();

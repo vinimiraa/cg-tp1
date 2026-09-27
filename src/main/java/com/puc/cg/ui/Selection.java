@@ -1,7 +1,9 @@
 package com.puc.cg.ui;
 
 import com.puc.cg.algorithms.transform.Matrix3;
+import com.puc.cg.commons.models.FillAction;
 import com.puc.cg.commons.models.Point2D;
+import com.puc.cg.commons.models.Point2DTransform;
 import com.puc.cg.commons.models.Shape;
 import com.puc.cg.commons.models.Window;
 import com.puc.cg.commons.util.Scene;
@@ -52,6 +54,8 @@ public class Selection {
     }
 
     public void applyTransform(Matrix3 matrix, Scene scene) {
+        List<Shape> selectedBeforeTransform = new ArrayList<>(shapes);
+
         List<Shape> sceneShapes = scene.getShapes();
         for (int i = 0; i < sceneShapes.size(); i++) {
             int selIndex = shapes.indexOf(sceneShapes.get(i));
@@ -61,5 +65,28 @@ public class Selection {
                 shapes.set(selIndex, transformed);
             }
         }
+
+        moveFillsWithShapes(matrix, scene.getFills(), selectedBeforeTransform);
+    }
+
+    private void moveFillsWithShapes(Matrix3 matrix, List<FillAction> fills, List<Shape> movedShapes) {
+        for (int i = 0; i < fills.size(); i++) {
+            FillAction fill = fills.get(i);
+            if (isInsideAny(fill.seed(), movedShapes)) {
+                Point2D transformedSeed = Point2DTransform.apply(matrix, fill.seed());
+                fills.set(i, new FillAction(transformedSeed, fill.method(), fill.fillColor(), fill.refColor(), fill.connectivity()));
+            }
+        }
+    }
+
+    private boolean isInsideAny(Point2D point, List<Shape> candidates) {
+        for (Shape shape : candidates) {
+            Window bounds = shape.bounds();
+            if (point.x() >= bounds.xMin() && point.x() <= bounds.xMax()
+                    && point.y() >= bounds.yMin() && point.y() <= bounds.yMax()) {
+                return true;
+            }
+        }
+        return false;
     }
 }

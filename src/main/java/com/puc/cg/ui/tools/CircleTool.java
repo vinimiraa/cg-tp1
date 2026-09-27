@@ -17,6 +17,7 @@ public class CircleTool implements DrawingTool {
             return;
         }
 
+        context.getScene().pushHistory();
         context.getScene().getShapes().add(new Circle(pendingCenter, radiusTo(point)));
         pendingCenter = null;
         context.clearPreview();

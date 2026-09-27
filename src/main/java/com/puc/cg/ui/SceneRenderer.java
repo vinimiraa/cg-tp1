@@ -46,8 +46,8 @@ public class SceneRenderer {
         }
 
         for (FillAction fill : scene.getFills()) {
-            int seedX = (int) Math.round(fill.seed().x());
-            int seedY = (int) Math.round(fill.seed().y());
+            int seedX = (int) Math.floor(fill.seed().x());
+            int seedY = (int) Math.floor(fill.seed().y());
             fill.method().fill(framebuffer, seedX, seedY, fill.fillColor(), fill.refColor(), fill.connectivity());
         }
 
@@ -94,8 +94,8 @@ public class SceneRenderer {
     }
 
     private void drawMarker(Framebuffer framebuffer, Point2D point, int rgb) {
-        int cx = (int) Math.round(point.x());
-        int cy = (int) Math.round(point.y());
+        int cx = (int) Math.floor(point.x());
+        int cy = (int) Math.floor(point.y());
         for (int offset = -MARKER_ARM_LENGTH; offset <= MARKER_ARM_LENGTH; offset++) {
             framebuffer.setPixel(cx + offset, cy, rgb);
             framebuffer.setPixel(cx, cy + offset, rgb);

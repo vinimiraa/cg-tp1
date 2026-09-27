@@ -130,6 +130,7 @@ public class ToolPanel extends JPanel {
 
         JButton applyButton = new JButton("Aplicar transformação");
         applyButton.addActionListener(e -> {
+            drawingPanel.getScene().pushHistory();
             double scale = scaleSlider.getValue() / SCALE_DIVISOR;
             Matrix3 rotateAndScale = Transformations.rotation(rotationSlider.getValue())
                     .multiply(Transformations.scale(scale, scale));
@@ -147,17 +148,26 @@ public class ToolPanel extends JPanel {
         group.setBorder(groupBorder("imagem"));
 
         JButton flipHButton = new JButton(Icons.FLIP_HORIZONTAL + " Inverter Horizontal");
-        flipHButton.addActionListener(e -> applyPivoted(drawingPanel, Transformations.reflectionY()));
+        flipHButton.addActionListener(e -> {
+            drawingPanel.getScene().pushHistory();
+            applyPivoted(drawingPanel, Transformations.reflectionY());
+        });
         fixedSize(flipHButton, Dimensions.BUTTON_WIDTH);
         group.add(flipHButton);
 
         JButton flipVButton = new JButton(Icons.FLIP_VERTICAL + " Inverter Vertical");
-        flipVButton.addActionListener(e -> applyPivoted(drawingPanel, Transformations.reflectionX()));
+        flipVButton.addActionListener(e -> {
+            drawingPanel.getScene().pushHistory();
+            applyPivoted(drawingPanel, Transformations.reflectionX());
+        });
         fixedSize(flipVButton, Dimensions.BUTTON_WIDTH);
         group.add(flipVButton);
 
         JButton flipBothButton = new JButton("Inverter H+V");
-        flipBothButton.addActionListener(e -> applyPivoted(drawingPanel, Transformations.reflectionXY()));
+        flipBothButton.addActionListener(e -> {
+            drawingPanel.getScene().pushHistory();
+            applyPivoted(drawingPanel, Transformations.reflectionXY());
+        });
         fixedSize(flipBothButton, Dimensions.BUTTON_WIDTH);
         group.add(flipBothButton);
 

@@ -9,6 +9,7 @@ public final class Palette {
     public static final int SELECTION_HIGHLIGHT = 0x00AA00;
     public static final int GRID_LINE = 0xE0E0E0;
     public static final int GRID_AXIS = 0xB0B0B0;
+    public static final int PIXEL_GRID = 0xC8C8C8;
     public static final int ORIGIN_HIGHLIGHT = 0xFF8800;
 
     private Palette() {
