@@ -5,7 +5,7 @@
 
 ## Pré-requisitos
 
-- Java 8 ou superior
+- Java 17 ou superior
 - Maven 3.6.0 ou superior
 
 ## Build e empacotamento
