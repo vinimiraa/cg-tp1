@@ -22,10 +22,6 @@ public class Selection {
         shapes.clear();
     }
 
-    public boolean contains(Shape shape) {
-        return shapes.contains(shape);
-    }
-
     public Window bounds() {
         double minX = Double.POSITIVE_INFINITY;
         double maxX = Double.NEGATIVE_INFINITY;

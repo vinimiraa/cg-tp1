@@ -41,8 +41,7 @@ public class SceneRenderer {
                     continue;
                 }
             }
-            int color = selection.contains(shape) ? Palette.SELECTION_HIGHLIGHT : Palette.BLACK;
-            toDraw.draw(framebuffer, lineRasterizer, circleRasterizer, color);
+            toDraw.draw(framebuffer, lineRasterizer, circleRasterizer, Palette.BLACK);
         }
 
         for (FillAction fill : scene.getFills()) {
